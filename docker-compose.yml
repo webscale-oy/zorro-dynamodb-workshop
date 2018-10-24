@@ -1,0 +1,29 @@
+version: "2"
+
+services:
+  zorro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run test
+    depends_on:
+      - dynamo
+    ports:
+    - "7777:9000"
+    volumes:
+    - ./src:/app/src:rw
+    - ./test:/app/test:rw
+    - ./package.json:/app/package.json:rw
+    - ./tsconfig.json:/app/tsconfig.json:rw
+    environment:
+    - AWS_ACCESS_KEY_ID=key
+    - AWS_SECRET_ACCESS_KEY=secret
+    - AWS_REGION=eu-central-1
+  dynamo:
+    image: instructure/dynamo-local-admin
+    ports:
+    - "6666:8000"
+    - "5555:8001"
+    environment:
+    - AWS_ACCESS_KEY_ID=key
+    - AWS_SECRET_ACCESS_KEY=secret

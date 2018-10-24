@@ -1,0 +1,19 @@
+# IDE
+.idea
+*.iml
+# dependencies
+node_modules
+
+# testing
+/coverage
+
+# production
+dist
+/db/data
+# misc
+.DS_Store
+.env
+npm-debug.log
+
+# volumes
+/common%/db/data
