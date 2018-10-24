@@ -16,32 +16,86 @@ export class InvoiceService {
 
   // 1
   public async getInvoices(companyId: number): Promise<Invoice[]> {
-    return []
+    const { Items } = await this.dynamo.query({
+      TableName: INVOICES,
+      IndexName: INVOICES_DATE_INDEX,
+      KeyConditionExpression: 'companyId = :companyId',
+      ExpressionAttributeValues: {
+        ':companyId': companyId
+      },
+      ScanIndexForward: false
+    }).promise()
+    return Items as Invoice[]
   }
 
   // 2
   public async createInvoice(companyId: string, invoice: Partial<Invoice>): Promise<Invoice> {
-    return null
+    const newInvoice = Object.assign({ created: Date.now() }, invoice, {companyId, id: v4()})
+    await this.dynamo.put({
+      TableName: INVOICES,
+      Item: newInvoice,
+      ReturnValues: 'NONE'
+    }).promise()
+    return newInvoice as Invoice
   }
 
   // 3
   public async markInvoicePaid(companyId: string, id: string): Promise<Invoice> {
-   return null
+    const { Attributes } = await this.dynamo.update({
+      TableName: INVOICES,
+      Key: { companyId, id },
+      UpdateExpression: 'set #status = :status',
+      ConditionExpression: 'attribute_not_exists(deleted)',
+      ExpressionAttributeValues: { ':status': 'paid' },
+      ExpressionAttributeNames: { '#status': 'status' },
+      ReturnValues: 'ALL_NEW'
+    }).promise()
+    return Attributes as Invoice
   }
 
   // 4
   public async getPaidInvoices(companyId: number): Promise<Invoice[]> {
-    return []
+    const { Items } = await this.dynamo.query({
+      TableName: INVOICES,
+      IndexName: INVOICES_DATE_INDEX,
+      KeyConditionExpression: 'companyId = :companyId',
+      FilterExpression: '#status = :status',
+      ExpressionAttributeValues: {
+        ':companyId': companyId,
+        ':status': 'paid'
+      },
+      ExpressionAttributeNames: {
+        '#status': 'status'
+      }
+    }).promise()
+    return Items as Invoice[]
   }
 
   // 5
   public async updateInvoice(companyId: string, id: string,  invoice: Invoice): Promise<Invoice> {
-    return null
+    const { Attributes } = await this.dynamo.put({
+      TableName: INVOICES,
+      Item: invoice,
+      ConditionExpression: 'companyId = :companyId AND id = :id #status = :status AND attribute_not_exists(deleted)',
+      ExpressionAttributeValues: { ':status': 'open', ':companyId': companyId, ':id': id },
+      ExpressionAttributeNames: { '#status': 'status' },
+      ReturnValues: 'ALL_NEW'
+    }).promise()
+    return Attributes as Invoice
   }
 
   // 6
   public async deleteInvoice(companyId: string, id: string): Promise<Invoice> {
-    return null
+    const { Attributes } = await this.dynamo.update({
+      TableName: INVOICES,
+      Key: { companyId, id },
+      UpdateExpression: 'set #status = :newStatus',
+      ConditionExpression: '#status <> :status',
+      ExpressionAttributeValues: { ':status': 'paid', ':newStatus': 'deleted' },
+      ExpressionAttributeNames: { '#status': 'status' },
+      ReturnValues: 'ALL_NEW'
+    }).promise()
+    return Attributes as Invoice
   }
 
   public async createTable() {
@@ -66,15 +120,15 @@ export class InvoiceService {
           ],
           LocalSecondaryIndexes: [
             {
-            IndexName: INVOICES_DATE_INDEX,
-            KeySchema: [
-              { AttributeName: "companyId",  KeyType: "HASH" },
-              { AttributeName: "created", KeyType: "RANGE" }
-            ],
-            Projection: {
-              ProjectionType: "ALL"
-            }
-          }],
+              IndexName: INVOICES_DATE_INDEX,
+              KeySchema: [
+                { AttributeName: "companyId",  KeyType: "HASH" },
+                { AttributeName: "created", KeyType: "RANGE" }
+              ],
+              Projection: {
+                ProjectionType: "ALL"
+              }
+            }],
           ProvisionedThroughput: {
             ReadCapacityUnits: 1,
             WriteCapacityUnits: 1
