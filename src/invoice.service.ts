@@ -16,12 +16,21 @@ export class InvoiceService {
 
   // 1
   public async getInvoices(companyId: number): Promise<Invoice[]> {
-    return []
+    const { Items } = await this.dynamo.query({
+      TableName: INVOICES
+    }).promise()
+    return Items as Invoice[]
   }
 
   // 2
   public async createInvoice(companyId: string, invoice: Partial<Invoice>): Promise<Invoice> {
-    return null
+    const newInvoice = Object.assign({ created: Date.now() }, invoice, {companyId, id: v4()})
+    await this.dynamo.put({
+      TableName: INVOICES,
+      Item: newInvoice,
+      ReturnValues: 'NONE'
+    }).promise()
+    return newInvoice as Invoice
   }
 
   // 3
