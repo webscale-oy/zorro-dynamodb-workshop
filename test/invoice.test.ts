@@ -90,4 +90,53 @@ describe('Invoice - API', () => {
       })
     )
   })
+
+  describe('Test UPDATE /invoices', () => {
+    let testInvoice1: Invoice
+    let paidInvoice: Invoice
+
+    beforeAll(async () => {
+      testInvoice1 = await invoiceService.createInvoice(companyA, newInvoice(companyA))
+      paidInvoice = await invoiceService.createInvoice(companyA, newInvoice(companyA))
+      paidInvoice = await invoiceService.markInvoicePaid(companyA, paidInvoice.id)
+    })
+
+    it('should update OPEN invoice', () => server
+      .put(`/invoices/${companyA}/${testInvoice1.id}`)
+      .send(Object.assign({}, testInvoice1, { amount: 100 }))
+      .expect(200)
+      .then(({ body }) => {
+        expect(body).toHaveProperty('amount', 100)
+      })
+    )
+    it('should NOT update PAID invoice', () => server
+      .put(`/invoices/${companyA}/${paidInvoice.id}`)
+      .send(Object.assign({}, paidInvoice, { amount: 100 }))
+      .expect(400)
+    )
+  })
+
+
+  describe('Test DELETE /invoices', () => {
+    let testInvoice1: Invoice
+    let paidInvoice: Invoice
+
+    beforeAll(async () => {
+      testInvoice1 = await invoiceService.createInvoice(companyA, newInvoice(companyA))
+      paidInvoice = await invoiceService.createInvoice(companyA, newInvoice(companyA))
+      paidInvoice = await invoiceService.markInvoicePaid(companyA, paidInvoice.id)
+    })
+
+    it('should delete OPEN invoice', () => server
+      .delete(`/invoices/${companyA}/${testInvoice1.id}`)
+      .expect(200)
+      .then(({ body }) => {
+        expect(body).toHaveProperty('status', 'deleted')
+      })
+    )
+    it('should NOT delete paid invoice', () => server
+      .delete(`/invoices/${companyA}/${paidInvoice.id}`)
+      .expect(400)
+    )
+  })
 })

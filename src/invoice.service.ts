@@ -73,15 +73,15 @@ export class InvoiceService {
 
   // 5
   public async updateInvoice(companyId: string, id: string,  invoice: Invoice): Promise<Invoice> {
-    const { Attributes } = await this.dynamo.put({
+    await this.dynamo.put({
       TableName: INVOICES,
       Item: invoice,
-      ConditionExpression: 'companyId = :companyId AND id = :id #status = :status AND attribute_not_exists(deleted)',
+      ConditionExpression: 'companyId = :companyId AND id = :id AND #status = :status AND attribute_not_exists(deleted)',
       ExpressionAttributeValues: { ':status': 'open', ':companyId': companyId, ':id': id },
       ExpressionAttributeNames: { '#status': 'status' },
-      ReturnValues: 'ALL_NEW'
+      ReturnValues: 'NONE'
     }).promise()
-    return Attributes as Invoice
+    return invoice
   }
 
   // 6
